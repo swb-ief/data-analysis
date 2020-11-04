@@ -1,21 +1,31 @@
 ---
-title: "About Statistics of Disease Dynamics "
+title: "About Statistical Methods "
 author: "LiJin Joo [lijin.joo at gmail.com](mailto:lijin.joo@gmail.com)"
-date: '2020-10-12'
+date: '2020-11-03'
 output:
   pdf_document: default
   html_document: default
 bibliography: covid19.bib
 ---
 
+
+# Smoothing Data and a Decision Rule
+
+To determine a trajectory of data, we smoothed the data by 21-day moving average (21-DMA). The raw counts include substantial day-to-day variability for the different data collection mechanisms, reviewing processes of hospitals and wards (i.e. administrative units in India), test capacity, and occasional checkups and regulation measures followed a sudden increase of cases. A 21-day window, chosen by a convention in the field, includes the data of current and past two weeks from today. A statistic of today reflects the previous 20 days of information and smooths out stochastic fluctuations during this period.
+
+
+Most statistics and metrics, provided by our dashboard, are smoothed by 21-DMA. Any decision based on the data must consider the fact that the observation of today is not yet complete. We determine if data is in a downward trajectory testing if a mean of this week (7D) is smaller than a mean of the previous two weeks (14D) and vice versa.
+
+
+# Disease Dynamics
+
 Reproduction number (R) and epidemic growth rate (r) are two statistics used to describe disease dynamics, or transmission of COVID-19. Each of them measures a different aspect of disease dynamics, thus, neither of them is interchangeable with the other. Reproduction number R tells about a direction of growth, whether an epidemic is growing or shrinking, but does not tell how fast a number of cases is growing at a given time point. On the other hand, the growth rate r provides the information about size and speed of change at one time point, but does not predict how likely it is that the number of cases will grow or decline over the next time period. The goal of presenting these two statistics is to assess the effectiveness of public health interventions, such as community lockdowns, and to assist decision making around relaxing or strengthening interventions based on the most recent data [@royal2020Randr] [@govUK2020Randr].
 
 ## Reproduction Number (R)
-The reproduction number (R) is the average number of secondary infections produced by a single infected person and shows the potential for transmission. 
-If R is greater than 1, every infected patient produces more than one new case on average, thus, the disease continues to spread. If R is smaller than 1, new cases from each existing patient are less than one on average, and the incidence of the disease will decline and eventually stop. 
+The reproduction number (R) is the average number of secondary infections produced by a single infected person and shows the potential for transmission. If R is greater than 1, every infected patient produces more than one new case on average, thus, the disease continues to spread. If R is smaller than 1, new cases from each existing patient are less than one on average, and the incidence of the disease will decline and eventually stop. 
 
 
-Initially, the basic reproduction number, R0, measures potential for disease transmission at the beginning of an epidemic, assuming a population never previously exposed to the pathogen [@delamater2019complexity]. However, in reality, it takes some time for an epidemic to be manifested. To estimate the number of secondary infections from a small number of initial cases, complex mathematical models under various sets of assumptions are necessary. One well-known model for separating secondary infections from observed cases is ``susceptible, incubation, infectious and recovered (SEIR) model”, which models each of the four populations using a series of ordinary differential equations [@royal2020Randr].
+Initially, the basic reproduction number, R0, measures potential for disease transmission at the beginning of an epidemic, assuming a population never previously exposed to the pathogen [@delamater2019complexity]. However, in reality, it takes some time for an epidemic to be manifested. To estimate the number of secondary infections from an extremely small number of initial cases, complex mathematical models under various sets of assumptions are necessary. One well-known model for separating secondary infections from observed cases is ``susceptible, incubation, infectious and recovered (SEIR) model”, which models each of the four populations using a series of ordinary differential equations [@royal2020Randr].
 
 
 Among the variations, we used a version of R called “time-varying” reproduction number, which concerns how disease transmissibility evolves over time, rather than the inherent biological characteristics of a pathogen. As infectious cases accumulate over time, cases grow faster with more cases from the susceptible, exposed and recovered populations, yet the speed of growth slows down over time within a population of finite size. Therefore, Rt is always smaller than R0.
@@ -25,38 +35,40 @@ For Rt, we used the method developed by [@cori2013new], which takes a series of 
 
 * The formula for Rt from {EpiEstim} is as follows.
 $$  R_t = \frac{I_t}{\sum_{s=1}^{t} I_{t-s} \omega_s} $$ 
-where $I_t$ is incidence at time $t$ and $\omega$ is a discounting weight for an incidence at time $s$ at the present time $t$ ($s < t$). This weight is estimated from an empirical density called ``serial intervals”, the average time between the first symptom of a transmitter and that of newly infected. To be compatible with the Poisson model for case series, a conjugate Gamma model is used.  The Poisson model predicts the number of new cases at time $t$, $I_t$ by approximation with a series of estimates of incidence as below.
+where $I_t$ is incidence at time $t$ and $\omega$ is a discounting weight for an incidence at time $s$ at the present time $t$ ($s < t$). This weight is estimated from an empirical density called ``serial intervals”, the average time between the first symptom of a transmitter and that of newly infected. To be compatible with the Poisson model for case series, a conjugate Gamma model is used. The Poisson model predicts the number of new cases at time $t$, $I_t$ by approximation with a series of estimates of incidence as below.
 
 $$ P(I_t | I_0, I_1, \dots, I_{t-1}, \omega, R_t) = \frac{(R_t \Lambda_t)^{I_t}}{I_t !}$$
 with  $\Lambda_t = \sum_{s=1}^{t} I_{t-s} \omega_s$.
 
 * As $I_t$ is a stochastic process, $R_t$ is as well. At time $t$, $R_t$ is right censored due to unreported cases because of 1) delay in reporting, 2) incubation period of new cases, 3) generation time, the time between infection events. These three parameters are incorporated in calculations by {EpiNow2} by [@abbott2020estimating], which contribute to the better uncertainty estimates for Rt. 
 
-* We used the estimate_R() function with a ``parametric_si” option assuming a gamma prior with a mean of 4 days, a standard deviation of 4.75 days, and a 7-day smoothing window  suggested by [@abbott2020estimating],  [@Basu2020]. However, Bayesian estimates give unreasonably small variations (sd < 0.01) for recent data where Rt remains near 1 with a large number of new cases.    
-
+* We used the estimate_R() function with a ``parametric_si” option assuming a gamma prior with a mean of 4 days, a standard deviation of 4.75 days, and a 7-day smoothing window suggested by [@abbott2020estimating] , [@Basu2020]. However, Bayesian estimates give unacceptably small variations (sd < 0.01) for some period where Rt remains near 1 with a large number of new cases. In this case, extra permutations are pursued to obtain a greater uncertainty estimate. 
 
 
 ## Growth Rate (r) 
 The growth rate r is calculated by the second order derivative of an incidence (generating) function and indicates how quickly infections are changing at time point $t$. A growth rate also shows how many new cases are likely to occur for the next time period, usually under the exponential growth assumption for an infectious disease, and can serve as an instantaneous indicator for the impact of a public health intervention. If the growth rate is greater than zero (or positive), the epidemic is growing. If the growth rate is less than zero (or negative) then the epidemic is declining [@royal2020Randr]. 
 
-* Calculation of $r$ is simple and does not require a model as in $Rt$. However, care must be taken to interpret the size of $r$ on an epidemic growth curve. For instance, a two times greater $r$ with a small number of new cases and a larger $Rt$, the growing phase of an epidemic, is a more critical situation than a two times greater $r$ with more new cases but a smaller $Rt$ at the stabilization phase of an epidemic. To enhance the interpretability of $r$, we provide two more statistics. 
+* Calculation of $r$ is simple and does not require a model as in $Rt$. However, care must be taken to interpret the size of $r$ on an epidemic growth curve. For instance, even if $r$ is same, $, the growing phase of an epidemic with a small number of new cases and a larger $Rt$ is more critical than the stable phase of an epidemic with a large number of new cases but a smaller $Rt$. To enhance the interpretability of $r$, we provide two more statistics. 
 
 * Doubling Time ($d_t$): we used the formula from [@Basu2020] as follows:
 $$ d_t = \tau \frac{log(2)}{log(1+r)} $$ 
 where the growth rate $r$ is given by 
 $$ r = \frac{I_{t} - I_{t-1}}{I_{t-1}}$$
 for $t = 0, 1, \dots, T$ and $\tau$ is the smoothing window size. We used $\tau =$ 7 days.  
+
+
 Doubling time estimates the time it takes for the number of future cases to be twice what it is today, based on the current growth rate $r$ as estimated by new cases within a window size $\tau$, in our case over the past week. Given that the growth rate of today reflects the data of previous 7 days, doubling time relates past observations to a prediction for the future. 
 
 * Levitt Statistics: The Levitt statistic is an alternative way to represent change in cases [@levitt2020predicting].
  $$ H(t) = log(\frac{X_t}{X_{t-1}}) $$
 where $X_t$ is cumulative cases up to day $t$.  While the growth rate $r$ represents the instantaneous rate of change in cases for each day, Levitt’s statistic calculates the change in cases relative to cumulative cases, which shows how the overall number of cases is changing, or the first derivative of change. If $H(t) < 0$, cases are decreasing. If $H(t) > 0$, cases are increasing. 
 
+
 We compute the Levitt statistic for deaths only, following the suggestion of [@raman2020will]. When the number of recorded incident cases is capped by testing capacity, an incidence series does not capture the growth of the epidemic accurately. Deaths are less prone to this type of confounding effect when testing capacity causes censoring of cases.   
 
 
 
-
+Editted by Emily Harville (mailto: harvilleconsult@gmail.com)
   
 ---
 nocite: |
@@ -64,7 +76,6 @@ nocite: |
 ...
 
 ### Reference
-
 
 
 
