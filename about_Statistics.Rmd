@@ -11,10 +11,10 @@ bibliography: covid19.bib
 
 # Smoothing Data and a Decision Rule
 
-To determine a trajectory of data, we smoothed the data by 21-day moving average (21-DMA). The raw counts include substantial day-to-day variability for the different data collection mechanisms, reviewing processes of hospitals and wards (i.e. administrative units in India), test capacity, and occasional checkups and regulation measures followed a sudden increase of cases. A 21-day window, chosen by a convention in the field, includes the data of current and past two weeks from today. A statistic of today reflects the previous 20 days of information and smooths out stochastic fluctuations during this period.
+To determine a trajectory of data, we smoothed the data by 21-day moving average (21-DMA). The raw counts include substantial day-to-day variability due to the different data collection mechanisms, reviewing processes of hospitals and wards (administrative units in India), test capacity, and occasional checkups and regulation measures following a sudden increase of cases. A 21-day window, chosen by a convention in the field, includes the data from the current week and previous two weeks. Today's statistic reflects information from the previous 20 days and smooths out stochastic fluctuations during this period.
 
 
-Most statistics and metrics, provided by our dashboard, are smoothed by 21-DMA. Any decision based on the data must consider the fact that the observation of today is not yet complete. We determine if data is in a downward trajectory testing if a mean of this week (7D) is smaller than a mean of the previous two weeks (14D) and vice versa.
+Most statistics and metrics provided by our dashboard are smoothed by 21-DMA. Any decision based on the data must consider the fact that the observations for today are not yet complete. We determine if data is in a downward trajectory by testing if the mean of this week (7D) is smaller than the mean of the previous two weeks (14D) and vice versa.
 
 
 # Disease Dynamics
