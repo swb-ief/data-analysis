@@ -57,10 +57,10 @@ estimates_mumbai_recent <- EpiNow2::epinow(reported_cases = mumbai_recent_tab, g
 
 Rt_EpiNow2 <- estimates_mumbai_recent$estimates$summarised
 
-Rt_mean_sd <- Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R") ,c(10,11)]
+Rt_mean_sd <- Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R" & Rt_EpiNow2[,"type"]=="estimate") ,c(10,11)]
 
 
-Rt_tab = cbind(Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R") ,c(1, 9, 7,8)], mean=Rt_mean_sd[,1], 
+Rt_tab = cbind(Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R" &  Rt_EpiNow2[,"type"]=="estimate") ,c(1, 9, 7,8)], mean=Rt_mean_sd[,1],
      CI_lower = Rt_mean_sd[,1]-1.96* Rt_mean_sd[,2],  CI_upper =Rt_mean_sd[,1]+ 1.96* Rt_mean_sd[,2]) 
 
 Rt_tab
