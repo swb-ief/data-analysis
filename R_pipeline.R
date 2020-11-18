@@ -23,16 +23,16 @@ suppressMessages(library(dplyr))
 #suppressMessages(mumbai<-read_csv(myfile))
 
                                                                                                                                         
-mumbai_recent <- read.csv("ME.csv", header=T)
+mumbai_recent <- read.csv("mumbai_2020.csv", header=T)
+delta_case_d <- mumbai_recent[,3] + mumbai_recent[,6]  - mumbai_recent[,4] -mumbai_recent[,5]
 
-mumbai_working_tab <- data.frame(date= as.Date(mumbai_recent$as_of,  "%m/%d/%y", origin="01/01/70"), mumbai_recent[,c(3:6)])
-mumbai_working_tab <- mumbai_working_tab[order(mumbai_working_tab[,1]), ]
+mumbai_recent_tab <- data.frame(date= as.Date(mumbai_recent$Date, origin="1970-01-01"), confirm=delta_case_d)
 
-delta_case_d <- mumbai_working_tab[,2] + mumbai_working_tab[,5]  - mumbai_working_tab[,3] -mumbai_working_tab[,4]
 
-plot(delta_case_d, ty="o") ##check how the series looks like##
+#mumbai_working_tab <- mumbai_working_tab[order(mumbai_working_tab[,1]), ]
 
-mumbai_recent_tab <- data.frame(date=as.Date(mumbai_working_tab[,1], origin="1970-01-01"), confirm=delta_case_d)
+#plot(delta_case_d, ty="o") ##check how the series looks like##
+
 
 ##model parameters as default##
 ##note that parameters about generation_time, incubation_period, reporting_delay are 
@@ -55,17 +55,105 @@ estimates_mumbai_recent <- EpiNow2::epinow(reported_cases = mumbai_recent_tab, g
                                            delays = list(incubation_period, reporting_delay), horizon = 7, samples = 1000, 
                                            warmup = 200, cores = 4, chains = 4, verbose = TRUE, adapt_delta = 0.95)
 
+#estimates_mumbai_recent2 <- EpiNow2::epinow(reported_cases = mumbai_recent_tab2, generation_time = generation_time,
+#                                           delays = list(incubation_period, reporting_delay), horizon = 7, samples = 1000, 
+#                                           warmup = 200, cores = 4, chains = 4, verbose = TRUE, adapt_delta = 0.95)
+
 Rt_EpiNow2 <- estimates_mumbai_recent$estimates$summarised
 
-Rt_mean_sd <- Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R" & Rt_EpiNow2[,"type"]=="estimate") ,c(10,11)]
+Rt_mean_sd <- Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R" & Rt_EpiNow2[,"type"]!="forecast") ,c(10,11)]
 
 
-Rt_tab = cbind(Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R" &  Rt_EpiNow2[,"type"]=="estimate") ,c(1, 9, 7,8)], mean=Rt_mean_sd[,1],
+Rt_tab = cbind(Rt_EpiNow2[which(Rt_EpiNow2[,"variable"]=="R" &  Rt_EpiNow2[,"type"]!="forecast") ,c(1, 4, 9, 7,8)], mean=Rt_mean_sd[,1],
      CI_lower = Rt_mean_sd[,1]-1.96* Rt_mean_sd[,2],  CI_upper =Rt_mean_sd[,1]+ 1.96* Rt_mean_sd[,2]) 
 
 Rt_tab
 
-write.csv(Rt_tab, "Rt_mumbai_0823_1115.csv")
+##to include the same dates of K used###
+
+#mumbai_recent_tab2 <- data.frame(date= as.Date(mumbai_recent$Date[-c(1:4, 127:139)], origin="1970-01-01"), confirm=delta_case_d[-c(1:4, 127:139)])
+#Rt_EpiNow2.2 <- estimates_mumbai_recent2$estimates$summarised
+
+#Rt_mean_sd2 <- Rt_EpiNow2[which(Rt_EpiNow2.2[,"variable"]=="R" & Rt_EpiNow2.2[,"type"]!="forecast") ,c(10,11)]
+
+
+#Rt_tab2 = cbind(Rt_EpiNow2.2[which(Rt_EpiNow2.2[,"variable"]=="R" &  Rt_EpiNow2.2[,"type"]!="forecast") ,c(1, 9, 7,8)], mean=Rt_mean_sd2[,1],
+#     CI_lower = Rt_mean_sd2[,1]-1.96* Rt_mean_sd2[,2],  CI_upper =Rt_mean_sd2[,1]+ 1.96* Rt_mean_sd2[,2]) 
+
+#Rt_tab2
+
+write.csv(Rt_tab, "Rt_mumbai_0701_1115_byLJ.csv")
+
+
+#### doublingg time##
+
+
+case_series_mumbai<- mumbai_recent_tab[-1,2] - mumbai_recent_tab[-dim(mumbai_recent_tab)[1],2] ## take out delta case##
+tot_cases_mumbai<- mumbai_recent[-1,3]## take out delta case##
+case_dates_mumbai <- mumbai_recent_tab[-1,1]
+
+compute_doubling_time(case_series=case_series_mumbai, total_cases=tot_cases_mumbai, case_dates=case_dates_mumbai , time.gap=7)
+
+compute_doubling_time <- function(case_series, total_cases, case_dates, time.gap){
+	suppressMessages(require(dplyr))
+	
+	data_tab = data.frame(date = case_dates, tot_cases = total_cases, cases = case_series )
+	
+	dbl_timr <- function(data, end_date=NULL, t.gap = 7) {
+  
+  if (is.null(end_date)) {
+    end_date <- max(data$date)
+   }
+  
+  t.start <-  data %>% filter(date == as.Date(as.Date(end_date, origin="1970-01-01") - time)) %>% pull(tot_cases)
+  #n = length(data$date)
+  
+  #t.start = as.Date(data$date[-seq(n-time + 1, n)], origin="1970-01-01")
+
+  if (length(t.start) == 0) {
+    NA
+  } else if (t.start == 0) {
+    NA
+  } else {
+    t.end   <- data %>% filter(date == as.Date(end_date, origin="1970-01-01")) %>% pull(tot_cases)
+    #t.end <- as.Date(data$date[-seq(1, time)], origin="1970-01-01")
+    }
+    
+      r <- ((t.end - t.start) / t.start) 
+      dt <- t.gap * (log(2) / log(1 + (r)))
+    return(c(r=r, dt=dt))
+  
+}
+
+  
+  tmp_v     <- matrix(NA, ncol=2, nrow=length(case_dates))
+    for(j in seq_along(case_dates)) {
+      task <- dbl_timr(data = data_tab,  end_date=case_dates[j], t.gap = time.gap)
+   if(is.na(task)==T|length(task)==0) {
+     tmp_v[j, ] <-c(NA, NA)
+   } else {
+     tmp_v[j, ]  <- task
+    }
+              
+  }
+  tmp_v <- data.frame(as.Date(case_dates, origin="1970-01-01"), tmp_v)
+  colnames(tmp_v) <- c("date", "r", "doubling time")
+
+  dt_est <- tmp_v[is.na(tmp_v[,2])==F, ]
+  
+ ##need to fix sd (time##)
+   tab_dt <- data.frame(date=dt_est[,1], r = dt_est[,2], r_CI_low= dt_est[,2] + qnorm(0.025)*sd(dt_est[,2]), r_CI_up= dt_est[,2] + qnorm(1-0.025)*sd(dt_est[,2]),
+                     doubling_time = dt_est[,3], dt_CI_low = dt_est[,3] + qnorm(0.025)*sd(dt_est[,3]), dt_CI_up = dt_est[,3] + qnorm(1-0.025)*sd(dt_est[,3]))
+
+  return(tab_dt) 
+
+}
+
+
+
+
+
+
 
 #################################################
 #################################################
@@ -79,7 +167,6 @@ write.csv(Rt_tab, "Rt_mumbai_0823_1115.csv")
 case_series_mumbai<-as.numeric(unlist(mumbai[,7])) ## take out delta case##
 tot_cases_mumbai<-as.numeric(unlist(mumbai[,4])) ## take out delta case##
 case_dates_mumbai <- unlist(mumbai[,1])
-
 
 #length(case_series_mumbai)
 
@@ -193,8 +280,6 @@ generation_time2 <- list(mean = 3.96,
                         sd = 4.75,
                         sd_sd = EpiNow2::covid_generation_times[1, ]$sd_sd,
                         max = 30)
-
-
 
 
 
