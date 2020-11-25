@@ -87,69 +87,77 @@ write.csv(Rt_tab, "Rt_mumbai_0701_1115_byLJ.csv")
 
 #### doublingg time##
 
+case_series<- ## take out delta case##
+tot_cases_mumbai<- mumbai_recent[,3]## take out delta case##
+case_dates_mumbai <- mumbai_recent_tab[,1]
 
-case_series_mumbai<- mumbai_recent_tab[-1,2] - mumbai_recent_tab[-dim(mumbai_recent_tab)[1],2] ## take out delta case##
-tot_cases_mumbai<- mumbai_recent[-1,3]## take out delta case##
-case_dates_mumbai <- mumbai_recent_tab[-1,1]
+#case_series=case_series_mumbai; total_cases=tot_cases_mumbai; case_dates=case_dates_mumbai; time.gap=7
 
-compute_doubling_time(case_series=case_series_mumbai, total_cases=tot_cases_mumbai, case_dates=case_dates_mumbai , time.gap=7)
+doubling_time_mumbai<-compute_doubling_time(total_cases=tot_cases_mumbai, case_dates=case_dates_mumbai , time.gap=7)
 
-compute_doubling_time <- function(case_series, total_cases, case_dates, time.gap){
+write.csv(doubling_time_mumbai, "douling_time_mumbai_070120_111620.csv")
+
+
+compute_doubling_time <- function(case_series, total_cases, case_dates, time.gap, alpha=0.05){
 	suppressMessages(require(dplyr))
 	
-	data_tab = data.frame(date = case_dates, tot_cases = total_cases, cases = case_series )
+	data_tab = data.frame(date = case_dates, tot_cases = total_cases )
 	
-	dbl_timr <- function(data, end_date=NULL, t.gap = 7) {
+	delta_case = data_tab[-1,2] - data_tab[-dim(data_tab)[1],2] 
+#	dbl_timr <- function(dat,  t.gap = time.gap) {
   
-  if (is.null(end_date)) {
-    end_date <- max(data$date)
-   }
+  #if (is.null(end_date)) {
+ #    end_date <- max(dat$date)
+ #  }
   
-  t.start <-  data %>% filter(date == as.Date(as.Date(end_date, origin="1970-01-01") - time)) %>% pull(tot_cases)
+  #t.start <-  dat %>% filter(date == as.Date(as.Date(end_date, origin="1970-01-01") - t.gap)) %>% pull(tot_cases)
   #n = length(data$date)
   
   #t.start = as.Date(data$date[-seq(n-time + 1, n)], origin="1970-01-01")
+	#  if (length(t.start) == 0) {
+	#    NA
+	# } else if (t.start == 0) {
+	#    NA
+	#  } else {
+	#    t.end   <- data %>% filter(date == as.Date(end_date, origin="1970-01-01")) %>% pull(tot_cases)
+	    #t.end <- as.Date(data$date[-seq(1, time)], origin="1970-01-01")
+	 # }
+	  
+	  
+	  end.time   <- dat$date + t.gap
+	  end.time   <- end.time[which(end.time %in% dat$date)]
+	  start.time <- dat$date[seq(1, length(t.end))]
+	  t.end   <- dat$tot_cases[which(dat$date %in% end.time)]
+	  t.start <- dat$tot_cases[seq(1, length(t.end))]
+	  
+	   if(length(t.start) != length(t.end)){
+	     message("check the date")
+	     break
+	   }
 
-  if (length(t.start) == 0) {
-    NA
-  } else if (t.start == 0) {
-    NA
-  } else {
-    t.end   <- data %>% filter(date == as.Date(end_date, origin="1970-01-01")) %>% pull(tot_cases)
-    #t.end <- as.Date(data$date[-seq(1, time)], origin="1970-01-01")
-    }
-    
+   
       r <- ((t.end - t.start) / t.start) 
-      dt <- t.gap * (log(2) / log(1 + (r)))
-    return(c(r=r, dt=dt))
+      dt <- time.gap * (log(2) / log(1 + (r)))
+      
+      r_d <- (dat$tot_cases[-1] - dat$tot_cases[-length(dat$tot_cases)] )/dat$tot_cases[-length(dat$tot_cases)]
+      dt_d <-  (log(2) / log(1 + (r_d)))
+        
+      sd_r <-c()
+      sd_dt <-c()
+       for(t in 1:(length(t.start)-1)){
+        
+      sd_r <- c(sd_r, sd(r_d[which(dat$date %in% seq(start.time[t], end.time[t], 1))]))
+      sd_dt <- c(sd_dt, sd(dt_d[which(dat$date %in% seq(start.time[t], end.time[t], 1))]))
+      
+       }
+      sd_r <- c(sd_r, sd_r[(length(t.start)-1)])
+      sd_dt <- c(sd_dt, sd_dt[(length(t.start)-1)])
+    
+      
+    return(data.frame(date=as.Date(end.time, origin="1970-01-01"),r=r, r_ci_low = r + qnorm(alpha/2)*sd_r, r_ci_up = r + qnorm(1-alpha/2)*sd_r,
+                      dt=dt, dt_ci_low = dt + qnorm(alpha/2)*sd_dt, dt_ci_up = dt + qnorm(1-alpha/2)*sd_dt))
   
 }
-
-  
-  tmp_v     <- matrix(NA, ncol=2, nrow=length(case_dates))
-    for(j in seq_along(case_dates)) {
-      task <- dbl_timr(data = data_tab,  end_date=case_dates[j], t.gap = time.gap)
-   if(is.na(task)==T|length(task)==0) {
-     tmp_v[j, ] <-c(NA, NA)
-   } else {
-     tmp_v[j, ]  <- task
-    }
-              
-  }
-  tmp_v <- data.frame(as.Date(case_dates, origin="1970-01-01"), tmp_v)
-  colnames(tmp_v) <- c("date", "r", "doubling time")
-
-  dt_est <- tmp_v[is.na(tmp_v[,2])==F, ]
-  
- ##need to fix sd (time##)
-   tab_dt <- data.frame(date=dt_est[,1], r = dt_est[,2], r_CI_low= dt_est[,2] + qnorm(0.025)*sd(dt_est[,2]), r_CI_up= dt_est[,2] + qnorm(1-0.025)*sd(dt_est[,2]),
-                     doubling_time = dt_est[,3], dt_CI_low = dt_est[,3] + qnorm(0.025)*sd(dt_est[,3]), dt_CI_up = dt_est[,3] + qnorm(1-0.025)*sd(dt_est[,3]))
-
-  return(tab_dt) 
-
-}
-
-
 
 
 
