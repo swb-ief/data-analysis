@@ -5,11 +5,10 @@
 
 # COVID 19 multiple city pipeline code
 # Aim: 
-# 1. convert code for V 1.3 
-# 2. 
+# 1. Convert code for V 1.3 
+# 2. Change code to allow for multiple cities.
 
-##COVID19 mumbai for pipline ##
-
+# first load all the libraries needed.
 
 options(warn=-1)
 options(message=-1)
@@ -18,7 +17,8 @@ options(message=-1)
 #install.packages("rstan")
 #install.packages("EpiNow2")
 
-
+suppressMessages(library("lubridate"))
+suppressMessages(library("tidyverse"))
 suppressMessages(library("EpiNow2"))
 suppressMessages(library("rstan"))
 suppressMessages(library(EpiEstim))
@@ -28,7 +28,7 @@ suppressMessages(library(incidence))
 suppressMessages(library(magrittr))
 suppressMessages(library(readr))# for read_csv
 suppressMessages(library(knitr)) # for kable
-suppressMessages(library(dplyr))
+
 #myfile <- "https://raw.githubusercontent.com/saurabhmj/etl-pipeline/metrics-branch/data_pipeline/output/metrics.csv"
 #suppressMessages(mumbai<-read_csv(myfile))
 
