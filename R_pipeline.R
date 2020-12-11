@@ -1,3 +1,13 @@
+
+################################################################
+##                    Multiple City-Rscript                    ##
+#################################################################
+
+# COVID 19 multiple city pipeline code
+# Aim: 
+# 1. convert code for V 1.3 
+# 2. 
+
 ##COVID19 mumbai for pipline ##
 
 
