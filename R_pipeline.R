@@ -28,6 +28,8 @@ suppressMessages(library(incidence))
 suppressMessages(library(magrittr))
 suppressMessages(library(readr)) # for read_csv
 suppressMessages(library(knitr)) # for kable
+suppressMessages(library(readxl))
+
 
 # to make the code acceptable for multiple
 # cites, we need to keep the name of the df constant
@@ -63,7 +65,10 @@ x <- 'Mumbai'
 # load the dataframe.
 # df <- read_csv("path/here.csv") #
 
-df = read_csv("E:/df2.csv")
+
+df = 
+read_excel('https://docs.google.com/spreadsheets/d/1HeTZKEXtSYFDNKmVEcRmF573k2ZraDb6DzgCOSXI0f0/edit#gid=0.xlsx',
+sheet = 'city_stats')
 
 # filter to keep data from only city of interest.
 # here in the toy dataset have created a col - city with two values - mumbai , pune.
