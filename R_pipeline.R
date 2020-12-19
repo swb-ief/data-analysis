@@ -7,6 +7,8 @@
 # Aim:
 # 1. Convert code for V 1.3
 # 2. Change code to allow for multiple cities.
+# 3. import data from google sheet, calculate rt and doubling time, then upload the result as sheets
+# back into the google drive.
 
 # first load all the libraries needed.
 
@@ -29,6 +31,8 @@ suppressMessages(library(magrittr))
 suppressMessages(library(readr)) # for read_csv
 suppressMessages(library(knitr)) # for kable
 suppressMessages(library(readxl))
+suppressMessages(library(googlesheets4))
+
 
 
 # to make the code acceptable for multiple
@@ -36,7 +40,7 @@ suppressMessages(library(readxl))
 # and then keep a placeholder for that specific city.
 # then run the code where x will be replaced by the name of the city.
 # column names need to be used for the code, but need to be kept the same always.
-# am going to use the colnames that are available in the mumbai df.
+# have used the col names from the google sheet.
 # to check the code I have created a toy dataset where the two cities are mumbai and pune.
 # I have randomly assigned the two cities into another column - city.
 # this code can be used to calculate rt and dt for each city separately
@@ -44,19 +48,17 @@ suppressMessages(library(readxl))
 # we can provide a path to the folder with the city name to make sure that the
 # results are saved in that folder.
 
+# import data from the google sheet...
+# no authorisation needed...
 
-# if we setwd for each time that we run the Rcode, then we will 
-# not need to decide where the file will be saved.
-# file will be saved directly to that working dir.
+gs4_deauth()
+sheets_url <- "https://docs.google.com/spreadsheets/d/1HeTZKEXtSYFDNKmVEcRmF573k2ZraDb6DzgCOSXI0f0/edit#gid=0"
 
-# setwd() --- we can set the working dir and then the 
-# results will automatically be saved here.
-
-
+df<- read_sheet(sheets_url,sheet="city_stats")
 
 
-
-# decide city name.
+# decide city or district to calculate for.
+# enter the city or district name as x.
 
 x <- cityname # insert city name here without " "
 
@@ -66,24 +68,40 @@ x <- 'Mumbai'
 # df <- read_csv("path/here.csv") #
 
 
-df = 
-read_excel('https://docs.google.com/spreadsheets/d/1HeTZKEXtSYFDNKmVEcRmF573k2ZraDb6DzgCOSXI0f0/edit#gid=0.xlsx',
-sheet = 'city_stats')
 
 # filter to keep data from only city of interest.
 # here in the toy dataset have created a col - city with two values - mumbai , pune.
 # we can change this small code according to the data-set colname that we are actually using
 
-df2 <- df %>% filter(city == x) # now to only keep city of interest.
+# df2 <- df %>% filter(city == x) # now to only keep city of interest.
+
+
+df2 <- df %>% filter(district == x)
 
 # check the df2 
 
 glimpse(df2)
 
-delta_case <- df2$Confirmed + df2$Active - df2$Recovered - df2$Deceased
-date <- as_date(df2$Date)
+# ensure that there is no missing data for the columns here.
+# we need only 5 columns for the calculation - 
 
-confirm <- delta_case
+df2 = df2 %>% dplyr::select(date, district, total.confirmed, total.deceased, total.recovered) # keep only col needed.
+
+df2 = df2[complete.cases(df2), ] # remove rows with NA to allow for calculation.
+
+df2$delta_case = df2$total.confirmed - df2$total.deceased - df2$total.recovered
+
+date <- as_date(df2$date)
+
+# delta_case <- df2$Confirmed + df2$Active - df2$Recovered - df2$Deceased #
+
+# column names have changed. also active column is not present in the present table. so, using the columns present...
+
+delta_case = df2$total.confirmed - df2$total.deceased - df2$total.recovered
+
+date <- as_date(df2$date)
+
+confirm <- df2$delta_case
 
 df3 <- tibble(date, confirm) # the colnames need to be
 # exactly this for the epinow function to work.
@@ -140,11 +158,11 @@ rt <- summary(rt, type = "parameters", params = "R")
 
 
 # this is the summary estimate for the city specified in the beginning.
-# here I have pasted the results back to my folder, but we can paste them back to google sheets
-# directly.
+# here I have pasted the results back to google-sheets and created a new sheet named 'rt'.
 
 
-write_csv(rt, "E:/rt.csv")
+
+# sheet_write(rt, sheet = string_c(x, "rt", sep = "_"))
 
 
 # doubling time function does not depend upon any package.
@@ -230,11 +248,8 @@ cases_dates <- df3$date
 
 db <- compute_doubling_time(total_cases, cases_dates, time.gap = 7, alpha = 0.95)
 
+# right now using the same code provided by @krishna for saving both rt and doubling_time results.
 
-write_csv(db, "E:/db.csv")
+write.csv(rt,'/usr/data/epinow2_out.csv')
 
-# now rt and db are the results for that city which is provided in x.
-# rt and db are saved.
-# we can create a path at the beginning of the code which can the decide where we
-# want the results for both to be saved.
-
+write.csv(db,'/usr/data/doubling_time.csv')
